@@ -34,9 +34,11 @@ app.get('/', function (req, res) {
 });
 
 app.get('/get_images', function(req, res) {
-  cloudinary.v2.api.resources({ type: 'upload' }, function(error, result) {
+  // console.log(req);
+  cloudinary.v2.api.resources(function(error, result) {
     if (error) {
       res.status(404);
+      res.json(error);
     }
     res.json(result.resources);
   })
@@ -50,8 +52,8 @@ app.post('/upload', upload.single('imageFile'), function (req, res) {
   var dest = fs.createWriteStream(target_path);
   src.pipe(dest);
   src.on('end', function () { 
-    cloudinary.v2.uploader.upload(target_path, function (result, error) {
-      if (error) throw(error);
+    cloudinary.v2.uploader.upload(target_path, function (error, result) {
+      if (error) res.send(error);
       fs.unlink(target_path, function(err) {
         if (err) {
           console.log('failed to delete local image: ' + err);
@@ -60,7 +62,7 @@ app.post('/upload', upload.single('imageFile'), function (req, res) {
         }
       });
       res.status(200);
-      res.redirect('http://localhost:3000/')
+      res.redirect('/');
     });
   });
   src.on('error', function (err) { console.log('error') });
