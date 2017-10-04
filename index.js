@@ -30,20 +30,37 @@ app.use(bodyParser.json({ limit: '11mb', type: 'application/json' }));
 app.use(bodyParser.urlencoded({ extended: false, limit: '11mb', type: 'application/x-www-form-urlencoding' }));
 
 app.get('/', function (req, res) {
-  res.send('Hello Digital Ocean!');
+  res.send('...');
+});
+
+app.get('/get_images', function(req, res) {
+  cloudinary.v2.api.resources({ type: 'upload' }, function(error, result) {
+    if (error) {
+      res.status(404);
+    }
+    res.json(result.resources);
+  })
 });
 
 app.post('/upload', upload.single('imageFile'), function (req, res) {
   var tmp_path = req.file.path;
-  var target_path = 'uploads/' + req.file.originalname;
+  var target_path = './uploads/' + req.file.originalname;
 
   var src = fs.createReadStream(tmp_path);
   var dest = fs.createWriteStream(target_path);
   src.pipe(dest);
   src.on('end', function () { 
-    cloudinary.uploader.upload(target_path, function (result, error) {
+    cloudinary.v2.uploader.upload(target_path, function (result, error) {
       if (error) throw(error);
-      res.send(result);
+      fs.unlink(target_path, function(err) {
+        if (err) {
+          console.log('failed to delete local image: ' + err);
+        } else {
+          console.log('successfully deleted local image');
+        }
+      });
+      res.status(200);
+      res.redirect('http://localhost:3000/')
     });
   });
   src.on('error', function (err) { console.log('error') });
