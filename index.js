@@ -11,6 +11,8 @@ var fs = require('fs');
 
 var app = express();
 
+var port = process.env.PORT || 8080;
+
 var cloudinary = require('cloudinary');
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -62,12 +64,12 @@ app.post('/upload', upload.single('imageFile'), function (req, res) {
         }
       });
       res.status(200);
-      res.redirect('/');
+      res.redirect('https://hellyhansen.itagency.ca/');
     });
   });
   src.on('error', function (err) { console.log('error') });
 });
 
-app.listen(8080, function () {
+app.listen(port, function () {
   console.log('magic is happening on port 8080!');
 });
