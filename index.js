@@ -11,8 +11,6 @@ var fs = require('fs');
 
 var app = express();
 
-var port = process.env.PORT || 8080;
-
 var cloudinary = require('cloudinary');
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -36,13 +34,13 @@ app.get('/', function (req, res) {
 });
 
 app.get('/get_images', function(req, res) {
-  // console.log(req);
-  cloudinary.v2.api.resources(function(error, result) {
+  cloudinary.v2.api.resources({max_results: 200}, function(error, result) {
     if (error) {
       res.status(404);
       res.json(error);
     }
-    res.json(result.resources);
+    console.log(result);
+    res.json({images: result.resources, next_cursor: result.next_cursor});
   })
 });
 
@@ -70,6 +68,6 @@ app.post('/upload', upload.single('imageFile'), function (req, res) {
   src.on('error', function (err) { console.log('error') });
 });
 
-app.listen(port, function () {
+app.listen(8080, function () {
   console.log('magic is happening on port 8080!');
 });
