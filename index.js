@@ -2,21 +2,35 @@ require('dotenv').load();
 var express = require('express');
 var bodyParser = require('body-parser');
 var morgan = require('morgan');
-var multer = require('multer')
-var upload = multer({ 
-  dest: 'uploads/',
-  limits: { fileSize: 10000000, files: 1, fields: 2 }
-});
+var multer = require('multer');
+var winston = require('winston');
 var fs = require('fs');
+var cloudinary = require('cloudinary');
 
 var app = express();
 
-var cloudinary = require('cloudinary');
+var upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 10000000, files: 1, fields: 2 }
+});
 
 cloudinary.config({
   cloud_name: process.env.NODE_ENV === 'production' ? process.env.CLOUDINARY_NAME : process.env.STAGING_CLOUDINARY_NAME,
   api_key: process.env.NODE_ENV === 'production' ? process.env.CLOUDINARY_API_KEY : process.env.STAGING_CLOUDINARY_API_KEY,
   api_secret: process.env.NODE_ENV === 'production' ? process.env.CLOUDINARY_SECRET_KEY : process.env.STAGING_CLOUDINARY_SECRET_KEY
+});
+
+var logger = new (winston.Logger)({
+  level: 'verbose',
+  transports: [
+    new (winston.transports.Console)({
+      timestamp: true
+    }),
+    new (winston.transports.File)({
+      filename: process.cwd() + '/logs\/server.log',
+      timestamp: true
+    })
+  ]
 });
 
 var APP_URL = process.env.NODE_ENV === 'production' ? 'https://hellyhansen.itagency.ca/' : 'http://localhost:3000';
@@ -34,11 +48,14 @@ app.use(bodyParser.urlencoded({ extended: false, limit: '11mb', type: 'applicati
 
 app.get('/get_images', function(req, res) {
   var cursor = req.query.next_cursor;
-  cloudinary.v2.api.resources({ max_results: 15, next_cursor: req.query.next_cursor, context: true }, function (error, result) {
+  logger.log('info', 'nextcursor: ' + cursor);
+  cloudinary.v2.api.resources({ max_results: 15, next_cursor: cursor, context: true }, function (error, result) {
     if (error) {
+      logger.log('error', 'cloudinary error: ' + error);
       res.status(404);
       res.json(error);
     }
+    logger.log('info', 'res.next_cursor: ' + result.next_cursor);
     res.json({ images: result.resources, next_cursor: result.next_cursor });
   })
 });
@@ -46,6 +63,8 @@ app.get('/get_images', function(req, res) {
 app.post('/upload', upload.single('imageFile'), function (req, res) {
   var tmp_path = req.file.path;
   var target_path = './uploads/' + req.file.originalname;
+
+  logger.log('info', 'target_path: ' + target_path);
 
   // console.log(tmp_path);
   // console.log(target_path);
@@ -62,25 +81,32 @@ app.post('/upload', upload.single('imageFile'), function (req, res) {
         caption: description
       }
     }, function (error, result) {
-      if (error) res.send(error);
+      if (error) {
+        logger.log('error', 'cloudinary error: ' + error);
+        res.send(error)
+      };
       fs.unlink(tmp_path, function(err) {
         if (err) {
+          logger.error('failed to delete local image: ' + err);
           console.log('failed to delete local image: ' + err);
         } else {
+          logger.info('successfully deleted local image');
           console.log('successfully deleted local image');
         }
       });
       fs.unlink(target_path, function (err) {
         if (err) {
+          logger.error('failed to delete other local image: ' + err);
           console.log('failed to delete local image: ' + err);
         } else {
+          logger.info('successfully deleted the other local image');
           console.log('successfully deleted the other local image');
         }
       });
       res.send({redirect: '/'});
     });
   });
-  src.on('error', function (err) { console.log('error') });
+  src.on('error', function (err) { logger.error('file read/write error: ' + err) });
 });
 
 app.listen(8080, function () {
