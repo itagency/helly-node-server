@@ -34,12 +34,12 @@ app.use(bodyParser.urlencoded({ extended: false, limit: '11mb', type: 'applicati
 
 app.get('/get_images', function(req, res) {
   var cursor = req.query.next_cursor;
-  cloudinary.v2.api.resources({max_results: 15, next_cursor: req.query.next_cursor, context: true}, function(error, result) {
+  cloudinary.v2.api.resources({ max_results: 15, next_cursor: req.query.next_cursor, context: true }, function (error, result) {
     if (error) {
       res.status(404);
       res.json(error);
     }
-    res.json({images: result.resources, next_cursor: result.next_cursor});
+    res.json({ images: result.resources, next_cursor: result.next_cursor });
   })
 });
 
